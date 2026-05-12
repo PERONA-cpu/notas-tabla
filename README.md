@@ -1,4 +1,4 @@
-# @title ⚔️ ESTRATEGA MAESTRO ES100 - v13.0 (CORRECCIÓN TOTAL DE COORDENADAS)
+# @title ⚔️ ESTRATEGA MAESTRO ES100 - v14.0 (CONTROL DE PATRONES Y FAKES)
 from IPython.display import display, HTML
 
 html_final = r"""
@@ -26,7 +26,7 @@ html_final = r"""
         .grid-table td { border: 1px solid var(--border); padding: 2px; vertical-align: top; }
         
         .cell-edit { height: 110px; resize: vertical; width: 100%; border: none; padding: 10px; font-size: 11px; line-height: 1.5; box-sizing: border-box; display: block; font-family: Verdana, sans-serif; background: transparent; }
-        .updated-flash { background: var(--update) !important; border: 2px solid orange !important; transition: 0.5s; }
+        .updated-flash { background: var(--update) !important; border: 2px solid #ef6c00 !important; transition: 0.4s; }
         
         .tribe-col { background: #fdf5e6; font-weight: bold; text-align: center; color: var(--header); font-size: 12px; }
     </style>
@@ -42,9 +42,9 @@ html_final = r"""
         </div>
 
         <div class="section" style="background: #cfd8dc;">
-            <h3>2. Inyectar Inteligente (v13.0)</h3>
-            <textarea id="bulkInput" rows="3" placeholder="Ej: 411|464 off / Selena Gomez español / Manyas *info..."></textarea>
-            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR DATOS</button>
+            <h3>2. Inyectar Inteligente (v14.0 Patrones)</h3>
+            <textarea id="bulkInput" rows="3" placeholder="Ej: Selena Gomez fakea a las 13:00 / 411|464 off / Kano *atención..."></textarea>
+            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR REGISTROS</button>
             <div id="bulkStatus" style="font-size:10px; font-weight:bold; color:#2e7d32; margin-top:5px;"></div>
         </div>
 
@@ -64,7 +64,7 @@ html_final = r"""
                     <th style="width: 140px;">JUGADOR</th>
                     <th style="width: 320px;">PUEBLOS (COORD) / ESTADO</th>
                     <th style="width: 120px;">PAÍS</th>
-                    <th style="width: 120px;">HORARIO</th>
+                    <th style="width: 160px;">HORARIO / PATRONES</th>
                     <th>NOTAS / PERFIL</th>
                     <th style="width: 40px;">X</th>
                 </tr>
@@ -102,10 +102,10 @@ function insertRowInGrid(cols, isH) {
         let cellClass = (i === 0) ? 'cell-edit tribe-col' : 'cell-edit';
         tr.insertCell().innerHTML = '<textarea class="' + cellClass + '">' + val + '</textarea>';
     }
-    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; font-weight:bold; font-size:18px;">✖</button>';
+    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold; font-size:18px;">✖</button>';
 }
 
-// --- SMART MERGE v13.0 ---
+// --- MOTOR SMART MERGE v14.0 ---
 function smartMerge() {
     const rawText = document.getElementById('bulkInput').value.trim();
     if (!rawText) return;
@@ -123,43 +123,32 @@ function smartMerge() {
         const lowLine = line.toLowerCase();
         let matchedLine = false;
 
-        // 1. REGLA: COORDENADAS (BUSCAR EN COLUMNA PUEBLOS)
+        // 1. REGLA: COORDENADAS (AVISO DE CONFLICTO OFF/DEF)
         if (coordMatch) {
             const coord = coordMatch[0];
             tableRows.forEach(row => {
                 let cellPueblos = row.cells[3].querySelector('textarea');
-                // Buscamos la coordenada aunque esté dentro de tags [coord]
                 if (cellPueblos.value.includes(coord)) {
                     let newType = lowLine.includes('off') ? 'OFF' : (lowLine.includes('def') ? 'DEF' : null);
-                    
                     if (newType) {
-                        // Regex para capturar la coordenada y ver si ya tiene un estado al lado
                         let regexReplace = new RegExp("(" + coord.replace('|','\\|') + "(?:\\[\\/coord\\])?)(\\s*(OFF|DEF))?", "i");
-                        let currentText = cellPueblos.value;
-                        let match = currentText.match(regexReplace);
-
+                        let match = cellPueblos.value.match(regexReplace);
                         if (match) {
                             let existing = match[3] ? match[3].toUpperCase() : null;
-                            let proceed = true;
-
                             if (existing && existing !== newType) {
-                                proceed = confirm("⚠️ CONFLICTO EN " + coord + "\n\nActual: " + existing + "\nNuevo: " + newType + "\n\n¿Quieres cambiarlo?");
+                                if(!confirm("⚠️ CONFLICTO INTELIGENCIA EN " + coord + "\nActual: " + existing + "\nNuevo: " + newType + "\n\n¿Cambiarlo?")) return;
                             }
-
-                            if (proceed) {
-                                // Reemplazamos la coordenada añadiendo el nuevo estado
-                                cellPueblos.value = currentText.replace(regexReplace, "$1 " + newType);
-                                row.classList.add('updated-flash');
-                                setTimeout(() => row.classList.remove('updated-flash'), 1000);
-                                matchedLine = true;
-                            }
+                            cellPueblos.value = cellPueblos.value.replace(regexReplace, "$1 " + newType);
+                            row.classList.add('updated-flash');
+                            setTimeout(() => row.classList.remove('updated-flash'), 1000);
+                            matchedLine = true;
                         }
                     }
                 }
             });
         }
 
-        // 2. REGLA: JUGADORES (PAÍS / HORARIO / NOTAS)
+        // 2. REGLA: JUGADORES (PAÍS / HORARIO / NOTAS) - SIN SOBREESCRIBIR HORARIOS
         if (!matchedLine) {
             for (let p of playerMap) {
                 if (lowLine.includes(p.name.toLowerCase())) {
@@ -168,18 +157,18 @@ function smartMerge() {
                     let cellNota = p.row.cells[6].querySelector('textarea');
                     let cleanInfo = line.replace(new RegExp(p.name, 'gi'), '').replace('*', '').trim();
 
+                    // REGLA NOTAS (*)
                     if (line.includes('*')) {
                         cellNota.value = (cleanInfo + "\n" + cellNota.value).trim();
-                    } else if (lowLine.includes('español') || lowLine.includes('latino') || lowLine.includes('españa') || lowLine.includes('mexic') || lowLine.includes('argentin')) {
-                        if (cellPais.value.trim() !== "" && !cellPais.value.toLowerCase().includes(cleanInfo.toLowerCase())) {
-                            if (!confirm("⚠️ CONFLICTO PAÍS en " + p.name + "\n\nActual: " + cellPais.value + "\nNuevo: " + cleanInfo + "\n\n¿Añadir delante?")) break;
-                        }
+                    } 
+                    // REGLA PAÍS
+                    else if (lowLine.includes('español') || lowLine.includes('latino') || lowLine.includes('españa') || lowLine.includes('mexic') || lowLine.includes('argentin')) {
                         cellPais.value = (cleanInfo + " " + cellPais.value).trim();
-                    } else if (lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{2}:\d{2}/)) {
-                        if (cellHora.value.trim() !== "" && !cellHora.value.toLowerCase().includes(cleanInfo.toLowerCase())) {
-                            if (!confirm("⚠️ CONFLICTO HORARIO en " + p.name + "\n\nActual: " + cellHora.value + "\nNuevo: " + cleanInfo + "\n\n¿Añadir delante?")) break;
-                        }
-                        cellHora.value = (cleanInfo + " " + cellHora.value).trim();
+                    } 
+                    // REGLA HORARIO / FAKES / REALES (ACUMULAR)
+                    else if (lowLine.includes('fake') || lowLine.includes('ataca') || lowLine.includes('real') || lowLine.includes('lanzada') || line.match(/\d{2}:\d{2}/)) {
+                        // Acumulamos el nuevo horario arriba del anterior
+                        cellHora.value = (cleanInfo + "\n" + cellHora.value).trim();
                     }
                     
                     p.row.classList.add('updated-flash');
@@ -191,7 +180,7 @@ function smartMerge() {
         }
         if (matchedLine) updatedCount++;
     });
-    document.getElementById('bulkStatus').innerText = updatedCount + " cambios aplicados.";
+    document.getElementById('bulkStatus').innerText = updatedCount + " actualizaciones registradas.";
     document.getElementById('bulkInput').value = "";
 }
 
