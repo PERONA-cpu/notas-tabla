@@ -3,86 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ES100 - Editor de Inteligencia v7.9</title>
+    <title>Editor Estratégico ES100 - v8.3</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --bg: #f4e4bc; --border: #7d5e3c; --header: #5d4037; --text: #3e2723; --accent: #ef6c00; }
-        
-        body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg); font-family: Verdana, Arial, sans-serif; color: var(--text); }
-        
+        body { font-family: Verdana, Arial, sans-serif; background-color: var(--bg); padding: 10px; color: var(--text); margin: 0; }
         #wrapper { display: flex; flex-direction: column; height: 100vh; }
         
-        .top-panels { display: flex; gap: 15px; padding: 15px; flex-shrink: 0; background: #decba4; border-bottom: 3px solid var(--border); }
-        
+        .top-panels { display: flex; gap: 15px; padding: 10px; flex-shrink: 0; }
         .section { background: #eee1c4; border: 2px solid var(--border); padding: 10px; border-radius: 8px; flex: 1; box-shadow: 3px 3px 10px rgba(0,0,0,0.2); }
-        h3 { margin: 0 0 8px 0; font-size: 13px; color: var(--header); border-bottom: 1px solid var(--border); text-transform: uppercase; }
+        h3 { margin: 0 0 8px 0; font-size: 14px; color: var(--header); border-bottom: 1px solid var(--border); text-transform: uppercase; }
         
-        textarea { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 5px; font-size: 11px; background: #fff; font-family: monospace; box-sizing: border-box; resize: vertical; }
-        
+        textarea { width: 100%; border: 1px solid var(--border); border-radius: 4px; padding: 5px; font-size: 11px; background: #fff; font-family: monospace; box-sizing: border-box; }
         .btn { background: var(--border); color: white; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; width: 100%; transition: 0.2s; }
         .btn:hover { background: var(--header); }
         .btn-merge { background: var(--accent); border: 2px solid #e65100; font-size: 1.1em; }
 
-        /* TABLA EDITOR */
-        .editor-container { flex-grow: 1; overflow-y: auto; padding: 15px; background: #f4e4bc; }
+        .editor-container { flex-grow: 1; overflow-y: auto; padding: 10px; background: #eee1c4; border-top: 3px solid var(--border); }
         .grid-table { width: 100%; border-collapse: collapse; background: #fff; table-layout: fixed; }
-        .grid-table th { background: var(--border); color: white; padding: 10px; font-size: 11px; position: sticky; top: 0; z-index: 10; text-transform: uppercase; }
+        .grid-table th { background: var(--border); color: white; padding: 8px; font-size: 10px; position: sticky; top: 0; z-index: 10; text-transform: uppercase; }
         .grid-table td { border: 1px solid var(--border); padding: 2px; vertical-align: top; }
+        .cell-edit { height: 110px; resize: vertical; width: 100%; border: none; padding: 8px; font-size: 11px; line-height: 1.4; box-sizing: border-box; display: block; font-family: Verdana, sans-serif; }
         
-        .cell-edit { height: 120px; resize: vertical; width: 100%; border: none; padding: 8px; font-size: 11px; line-height: 1.5; box-sizing: border-box; display: block; font-family: Verdana, sans-serif; }
-        .cell-edit:focus { background: #fffde7; outline: none; }
-        
-        .updated-flash { background: #fff9c4 !important; transition: 1.5s; }
-        
-        .footer-tools { padding: 10px; background: #eee1c4; border-top: 2px solid var(--border); display: flex; gap: 10px; }
+        .updated-flash { background: #fff9c4 !important; transition: 1s; }
+        .tribe-col { background: #fdf5e6; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
 
 <div id="wrapper">
     <div class="top-panels">
-        <!-- 1. IMPORTAR -->
+        <!-- BLOQUE 1: IMPORTACIÓN -->
         <div class="section">
-            <h3>1. Importar Tabla (Foro)</h3>
-            <textarea id="importInput" rows="3" placeholder="Pega el BBCode [table] de la tribu..."></textarea>
-            <button class="btn" onclick="importTable()">CARGAR DATOS AL EDITOR</button>
+            <h3>1. Importar Multi-Spoiler</h3>
+            <textarea id="importInput" rows="3" placeholder="Pega aquí el código con [spoiler] y [table]..."></textarea>
+            <button class="btn" onclick="importTable()">CARGAR TABLA AL EDITOR</button>
         </div>
 
-        <!-- 2. INYECCIÓN INTELIGENTE -->
-        <div class="section" style="background: #cfd8dc; border-color: #455a64;">
-            <h3>2. Inyectar Inteligencia (Personal / Bélica)</h3>
-            <textarea id="bulkInput" rows="3" placeholder="Ej: Don Camion es español, trabaja de noche. Fakea a las 14:00"></textarea>
-            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR PERFILES</button>
+        <!-- BLOQUE 2: FUSIÓN DE DATOS -->
+        <div class="section" style="background: #cfd8dc;">
+            <h3>2. Inyección de Info (v8.3 Fusión Segura)</h3>
+            <textarea id="bulkInput" rows="3" placeholder="Ej: El Lobo De Wall Street es español..."></textarea>
+            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR SIN DUPLICAR</button>
             <div id="bulkStatus" style="font-size:10px; font-weight:bold; color:#2e7d32; margin-top:3px;"></div>
         </div>
 
-        <!-- 3. EXPORTAR -->
+        <!-- BLOQUE 3: EXPORTACIÓN -->
         <div class="section">
-            <h3>3. Exportar Código Foro</h3>
+            <h3>3. Exportar para el Foro</h3>
             <button class="btn" style="background:#5d4037" onclick="generateBBCode()">GENERAR BBCODE FINAL</button>
-            <textarea id="outputCode" rows="3" readonly onclick="this.select()" placeholder="Código resultante..."></textarea>
+            <textarea id="outputCode" rows="3" readonly placeholder="Código listo..."></textarea>
         </div>
     </div>
 
-    <!-- EDITOR PRINCIPAL -->
+    <!-- PANEL DEL EDITOR -->
     <div class="editor-container">
         <table class="grid-table">
             <thead>
                 <tr>
                     <th style="width: 30px;">H</th>
-                    <th style="width: 150px;">JUGADOR</th>
-                    <th style="width: 300px;">PUEBLOS (COORD)</th>
-                    <th style="width: 200px;">HORARIOS / FAKES</th>
+                    <th style="width: 90px;">TRIBU</th>
+                    <th style="width: 140px;">JUGADOR</th>
+                    <th style="width: 260px;">PUEBLOS (COORD)</th>
+                    <th style="width: 180px;">HORARIOS / FAKES</th>
                     <th>NOTAS / PERFIL PERSONAL</th>
                     <th style="width: 40px;">X</th>
                 </tr>
             </thead>
             <tbody id="editableGrid"></tbody>
         </table>
-    </div>
-
-    <div class="footer-tools">
-        <button class="btn" style="background:#2e7d32; width: 180px;" onclick="addRow()">+ Nueva Fila Manual</button>
-        <button class="btn" style="background:#b71c1c; width: 180px;" onclick="clearAll()">Borrar Todo el Editor</button>
+        <div style="padding: 20px;">
+            <button class="btn" style="background:#2e7d32; width:180px;" onclick="addRow()">+ Fila Manual</button>
+            <button class="btn" style="background:#b71c1c; width:180px; margin-left: 10px;" onclick="clearAll()">BORRAR TODO EL EDITOR</button>
+        </div>
     </div>
 </div>
 
@@ -90,11 +83,12 @@
 const LBL_HORARIO = "horario:";
 const LBL_NOTAS = "cosas que sepamos del jugador:";
 
-// Limpia celdas para evitar etiquetas duplicadas al importar
-function cleanCellText(text, labelToKeep) {
-    let clean = text.replace(new RegExp(LBL_HORARIO, "gi"), "");
-    clean = clean.replace(new RegExp(LBL_NOTAS, "gi"), "");
-    return labelToKeep + " " + clean.trim();
+function cleanTags(t) { return t.replace(/\[player\]|\[\/player\]|\[coord\]|\[\/coord\]/gi, '').trim(); }
+
+function formatCell(text, label) {
+    if (!text) return label + " ";
+    let clean = text.replace(new RegExp(LBL_HORARIO, "gi"), "").replace(new RegExp(LBL_NOTAS, "gi"), "").trim();
+    return label + " " + clean;
 }
 
 function importTable() {
@@ -102,45 +96,44 @@ function importTable() {
     if (!raw.includes('[table]')) return alert("Por favor, pega una tabla BBCode válida.");
     
     document.getElementById('editableGrid').innerHTML = "";
-    let content = raw.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
-    let rows = content.split(/\[\*\]|\[\*\*\]/).filter(r => r.trim().length > 5);
-    let playersMap = {};
-
-    rows.forEach(r => {
-        let isHeader = r.includes('[**]');
-        let cleanRow = r.replace(/\[\/\*\]/gi, '').replace(/\[\/\*\*\]/gi, '').trim();
-        let cols = cleanRow.split(/\[\|\|\]|\[\|\]/).map(c => c.trim());
-        
-        if (cols.length >= 2) {
-            let nick = cols[0] || "Desconocido";
-            if (!playersMap[nick]) {
-                let hVal = cleanCellText(cols[2] || "", LBL_HORARIO);
-                let nVal = cleanCellText(cols[3] || "", LBL_NOTAS);
-                playersMap[nick] = { villages: cols[1], schedule: hVal, notes: nVal, isH: isHeader };
-            } else { 
-                playersMap[nick].villages += "\n" + cols[1]; 
-            }
-        }
-    });
-
-    for (let nick in playersMap) { 
-        insertRowInGrid([nick, playersMap[nick].villages, playersMap[nick].schedule, playersMap[nick].notes], playersMap[nick].isH); 
+    
+    const spoilerRegex = /\[spoiler=(.*?)\](.*?)\[\/spoiler\]/gis;
+    let match, found = false;
+    while ((match = spoilerRegex.exec(raw)) !== null) {
+        processBlock(match[2], match[1].trim());
+        found = true;
     }
+    if (!found) processBlock(raw, "General");
     document.getElementById('importInput').value = "";
 }
 
-function insertRowInGrid(colsData = ["", "", LBL_HORARIO, LBL_NOTAS], isHeader = false) {
+function processBlock(text, tribeName) {
+    let content = text.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
+    let rows = content.split(/\[\*\]|\[\*\*\]/).filter(r => r.trim().length > 5);
+    
+    rows.forEach(r => {
+        let isH = r.includes('[**]');
+        let cleanR = r.replace(/\[\/\*\]/gi, '').replace(/\[\/\*\*\]/gi, '').trim();
+        let cols = cleanR.split(/\[\|\|\]/).map(c => c.trim());
+        
+        if (cols.length >= 2) {
+            insertRowInGrid([tribeName, cols[0], cols[1], cols[2] || "", cols[3] || ""], isH);
+        }
+    });
+}
+
+function insertRowInGrid(cols, isH) {
     const tableBody = document.getElementById('editableGrid');
     let tr = tableBody.insertRow();
-    tr.insertCell().innerHTML = '<input type="checkbox" ' + (isHeader ? 'checked' : '') + '>';
-    
-    for (let i = 0; i < 4; i++) {
-        let val = colsData[i] || "";
-        if (i === 2 && !val.toLowerCase().includes(LBL_HORARIO)) val = LBL_HORARIO + " " + val;
-        if (i === 3 && !val.toLowerCase().includes(LBL_NOTAS)) val = LBL_NOTAS + " " + val;
-        tr.insertCell().innerHTML = '<textarea class="cell-edit">' + val + '</textarea>';
+    tr.insertCell().innerHTML = '<input type="checkbox" ' + (isH ? 'checked' : '') + '>';
+    for (let i = 0; i < 5; i++) {
+        let val = cols[i] || "";
+        if (i === 3) val = formatCell(val, LBL_HORARIO);
+        if (i === 4) val = formatCell(val, LBL_NOTAS);
+        let cellClass = (i === 0) ? 'cell-edit tribe-col' : 'cell-edit';
+        tr.insertCell().innerHTML = '<textarea class="' + cellClass + '">' + val + '</textarea>';
     }
-    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold; font-size:16px;">✖</button>';
+    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold; font-size: 16px;">✖</button>';
 }
 
 function smartMerge() {
@@ -150,53 +143,57 @@ function smartMerge() {
     const tableRows = document.getElementById('editableGrid').rows;
     let updated = 0;
 
+    let playerList = [];
+    for (let i = 0; i < tableRows.length; i++) {
+        let name = cleanTags(tableRows[i].cells[2].querySelector('textarea').value).toLowerCase();
+        playerList.push({ name: name, index: i });
+    }
+    playerList.sort((a, b) => b.name.length - a.name.length);
+
     lines.forEach(line => {
         const coordMatch = line.match(/(\d{1,3})[|](\d{1,3})/);
         const lowLine = line.toLowerCase();
-        
-        // Clasificación de Información
-        let isScheduleInfo = lowLine.includes('fake') || lowLine.includes('ataca') || lowLine.includes('lanza') || line.match(/\d{1,2}:\d{2}/);
-        let isPersonalInfo = lowLine.includes('hijo') || lowLine.includes('trabaja') || lowLine.includes('estudia') || 
-                             lowLine.includes('español') || lowLine.includes('mexic') || lowLine.includes('latino') || 
-                             lowLine.includes('argentin') || lowLine.includes('casado');
+        let isH = lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{1,2}:\d{2}/);
+        let targetRow = null;
 
-        for (let i = 0; i < tableRows.length; i++) {
-            let row = tableRows[i];
-            let cellPlayer = row.cells[1].querySelector('textarea').value;
-            let cellVillage = row.cells[2].querySelector('textarea');
-            let cellSchedule = row.cells[3].querySelector('textarea');
-            let cellNotes = row.cells[4].querySelector('textarea');
-
-            let matchesCoord = coordMatch && cellVillage.value.includes(coordMatch[0]);
-            let matchesPlayer = !coordMatch && cellPlayer.toLowerCase().includes(line.split(' ')[0].toLowerCase());
-
-            if (matchesCoord || matchesPlayer) {
-                let cleanData = line.replace(new RegExp("^" + line.split(' ')[0], 'i'), '').trim();
-
-                // Fusión Quirúrgica: Horarios
-                if (isScheduleInfo) {
-                    if (!cellSchedule.value.includes(cleanData)) {
-                        cellSchedule.value = (cellSchedule.value.trim() + " " + cleanData).replace(new RegExp(LBL_HORARIO + "\\s*", "gi"), LBL_HORARIO + " ");
-                    }
-                } else {
-                    // Fusión Quirúrgica: Perfil Personal
-                    if (!cellNotes.value.includes(cleanData)) {
-                        cellNotes.value = (cellNotes.value.trim() + " " + cleanData).replace(new RegExp(LBL_NOTAS + "\\s*", "gi"), LBL_NOTAS + " ");
-                    }
+        if (coordMatch) {
+            for (let i = 0; i < tableRows.length; i++) {
+                if (tableRows[i].cells[3].querySelector('textarea').value.includes(coordMatch[0])) {
+                    targetRow = tableRows[i]; break;
                 }
-
-                // Cambio de tipo de pueblo OFF/DEF
-                let newType = lowLine.includes('off') ? "OFF" : (lowLine.includes('def') ? "DEF" : "");
-                if (newType && coordMatch) {
-                    let base = "[coord]" + coordMatch[0] + "[/coord]";
-                    let regex = new RegExp("\\[coord\\]" + coordMatch[0] + "\\[\\/coord\\].*?(\\n|$)", "i");
-                    cellVillage.value = cellVillage.value.replace(regex, base + " " + newType + "\n").trim();
-                }
-
-                row.classList.add('updated-flash');
-                setTimeout(() => row.classList.remove('updated-flash'), 1500);
-                updated++;
             }
+        }
+
+        if (!targetRow) {
+            for (let p of playerList) {
+                if (lowLine.startsWith(p.name)) {
+                    targetRow = tableRows[p.index]; break;
+                }
+            }
+        }
+
+        if (targetRow) {
+            let cellH = targetRow.cells[4].querySelector('textarea');
+            let cellN = targetRow.cells[5].querySelector('textarea');
+            let cellV = targetRow.cells[3].querySelector('textarea');
+
+            let infoToInject = line.trim();
+
+            if (!cellH.value.includes(infoToInject) && !cellN.value.includes(infoToInject)) {
+                if (isH) cellH.value = cellH.value.trim() + " " + infoToInject;
+                else cellN.value = cellN.value.trim() + " " + infoToInject;
+            }
+
+            if (coordMatch && (lowLine.includes('off') || lowLine.includes('def'))) {
+                let type = lowLine.includes('off') ? "OFF" : "DEF";
+                let base = "[coord]" + coordMatch[0] + "[/coord]";
+                let regex = new RegExp("\\[coord\\]" + coordMatch[0] + "\\[\\/coord\\].*?(\\n|$)", "i");
+                cellV.value = cellV.value.replace(regex, base + " " + type + "\n").trim();
+            }
+
+            targetRow.classList.add('updated-flash');
+            setTimeout(() => targetRow.classList.remove('updated-flash'), 1000);
+            updated++;
         }
     });
     document.getElementById('bulkStatus').innerText = updated + " perfiles actualizados.";
@@ -204,26 +201,39 @@ function smartMerge() {
 }
 
 function generateBBCode() {
-    const rows = document.getElementById('editableGrid').rows;
-    if (rows.length === 0) return alert("La tabla está vacía.");
+    const rows = Array.from(document.getElementById('editableGrid').rows);
+    if (rows.length === 0) return alert("El editor está vacío.");
     
-    let bbcode = "[table]\n";
-    for (let i = 0; i < rows.length; i++) {
-        let isH = rows[i].cells[0].querySelector('input').checked;
-        let tag = isH ? "[**]" : "[*]";
-        let cells = [];
-        for (let j = 1; j <= 4; j++) { 
-            cells.push(rows[i].cells[j].querySelector('textarea').value.trim()); 
-        }
-        bbcode += tag + cells.join("[||]") + "\n";
+    let groups = {};
+    rows.forEach(r => {
+        let tribe = r.cells[1].querySelector('textarea').value.trim();
+        if (!groups[tribe]) groups[tribe] = [];
+        groups[tribe].push(r);
+    });
+
+    let finalBB = "";
+    for (let t in groups) {
+        finalBB += "[spoiler=" + t + "]\n[table]\n";
+        groups[t].forEach(row => {
+            let tag = row.cells[0].querySelector('input').checked ? "[**]" : "[*]";
+            let cells = [];
+            for (let j = 2; j <= 5; j++) cells.push(row.cells[j].querySelector('textarea').value.trim());
+            finalBB += tag + cells.join("[||]") + "\n";
+        });
+        finalBB += "[/table]\n[/spoiler]\n\n";
     }
-    bbcode += "[/table]";
-    document.getElementById('outputCode').value = bbcode;
-    alert("¡Código generado! Cópialo del cuadro de la derecha.");
+    document.getElementById('outputCode').value = finalBB;
 }
 
-function addRow() { insertRowInGrid(["","",LBL_HORARIO, LBL_NOTAS], false); }
-function clearAll() { if(confirm("¿Seguro que quieres limpiar todo el editor?")) document.getElementById('editableGrid').innerHTML = ""; }
+function clearAll() {
+    if(confirm("¿Estás seguro de que quieres borrar todos los datos del editor?")) {
+        document.getElementById('editableGrid').innerHTML = "";
+    }
+}
+
+function addRow() { 
+    insertRowInGrid(["General","","","horario: ","cosas que sepamos del jugador: "], false); 
+}
 </script>
 </body>
 </html>
