@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor Estratégico ES100 - v8.3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <meta charset="utf-8">
+    <title>Estratega Maestro ES100</title>
     <style>
         :root { --bg: #f4e4bc; --border: #7d5e3c; --header: #5d4037; --text: #3e2723; --accent: #ef6c00; }
         body { font-family: Verdana, Arial, sans-serif; background-color: var(--bg); padding: 10px; color: var(--text); margin: 0; }
@@ -33,30 +32,26 @@
 
 <div id="wrapper">
     <div class="top-panels">
-        <!-- BLOQUE 1: IMPORTACIÓN -->
         <div class="section">
             <h3>1. Importar Multi-Spoiler</h3>
-            <textarea id="importInput" rows="3" placeholder="Pega aquí el código con [spoiler] y [table]..."></textarea>
+            <textarea id="importInput" rows="3" placeholder="Pega el código con [spoiler] y [table]..."></textarea>
             <button class="btn" onclick="importTable()">CARGAR TABLA AL EDITOR</button>
         </div>
 
-        <!-- BLOQUE 2: FUSIÓN DE DATOS -->
         <div class="section" style="background: #cfd8dc;">
-            <h3>2. Inyección de Info (v8.3 Fusión Segura)</h3>
-            <textarea id="bulkInput" rows="3" placeholder="Ej: El Lobo De Wall Street es español..."></textarea>
-            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR SIN DUPLICAR</button>
+            <h3>2. Inyección de Info (v8.2 Anti-Duplicados)</h3>
+            <textarea id="bulkInput" rows="3" placeholder="Ej: Manyas el Magno es español... (Detecta nombres con espacios)"></textarea>
+            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR SIN ERRORES</button>
             <div id="bulkStatus" style="font-size:10px; font-weight:bold; color:#2e7d32; margin-top:3px;"></div>
         </div>
 
-        <!-- BLOQUE 3: EXPORTACIÓN -->
         <div class="section">
-            <h3>3. Exportar para el Foro</h3>
+            <h3>3. Exportar</h3>
             <button class="btn" style="background:#5d4037" onclick="generateBBCode()">GENERAR BBCODE FINAL</button>
             <textarea id="outputCode" rows="3" readonly placeholder="Código listo..."></textarea>
         </div>
     </div>
 
-    <!-- PANEL DEL EDITOR -->
     <div class="editor-container">
         <table class="grid-table">
             <thead>
@@ -72,10 +67,6 @@
             </thead>
             <tbody id="editableGrid"></tbody>
         </table>
-        <div style="padding: 20px;">
-            <button class="btn" style="background:#2e7d32; width:180px;" onclick="addRow()">+ Fila Manual</button>
-            <button class="btn" style="background:#b71c1c; width:180px; margin-left: 10px;" onclick="clearAll()">BORRAR TODO EL EDITOR</button>
-        </div>
     </div>
 </div>
 
@@ -83,9 +74,8 @@
 const LBL_HORARIO = "horario:";
 const LBL_NOTAS = "cosas que sepamos del jugador:";
 
-function cleanTags(t) { return t.replace(/\[player\]|\[\/player\]|\[coord\]|\[\/coord\]/gi, '').trim(); }
-
-function formatCell(text, label) {
+// Limpieza profunda de celdas para evitar duplicar etiquetas infinitas
+function formatCellContent(text, label) {
     if (!text) return label + " ";
     let clean = text.replace(new RegExp(LBL_HORARIO, "gi"), "").replace(new RegExp(LBL_NOTAS, "gi"), "").trim();
     return label + " " + clean;
@@ -93,12 +83,12 @@ function formatCell(text, label) {
 
 function importTable() {
     let raw = document.getElementById('importInput').value.trim();
-    if (!raw.includes('[table]')) return alert("Por favor, pega una tabla BBCode válida.");
-    
+    if (!raw.includes('[table]')) return alert("Pega una tabla válida");
     document.getElementById('editableGrid').innerHTML = "";
     
     const spoilerRegex = /\[spoiler=(.*?)\](.*?)\[\/spoiler\]/gis;
-    let match, found = false;
+    let match;
+    let found = false;
     while ((match = spoilerRegex.exec(raw)) !== null) {
         processBlock(match[2], match[1].trim());
         found = true;
@@ -110,15 +100,11 @@ function importTable() {
 function processBlock(text, tribeName) {
     let content = text.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
     let rows = content.split(/\[\*\]|\[\*\*\]/).filter(r => r.trim().length > 5);
-    
     rows.forEach(r => {
         let isH = r.includes('[**]');
         let cleanR = r.replace(/\[\/\*\]/gi, '').replace(/\[\/\*\*\]/gi, '').trim();
-        let cols = cleanR.split(/\[\|\|\]/).map(c => c.trim());
-        
-        if (cols.length >= 2) {
-            insertRowInGrid([tribeName, cols[0], cols[1], cols[2] || "", cols[3] || ""], isH);
-        }
+        let cols = cleanR.split(/\s*\[\|\|\]\s*|\s*\[\|\]\s*/).map(c => c.trim());
+        if (cols.length >= 2) insertRowInGrid([tribeName, cols[0], cols[1], cols[2] || "", cols[3] || ""], isH);
     });
 }
 
@@ -128,12 +114,12 @@ function insertRowInGrid(cols, isH) {
     tr.insertCell().innerHTML = '<input type="checkbox" ' + (isH ? 'checked' : '') + '>';
     for (let i = 0; i < 5; i++) {
         let val = cols[i] || "";
-        if (i === 3) val = formatCell(val, LBL_HORARIO);
-        if (i === 4) val = formatCell(val, LBL_NOTAS);
+        if (i === 3) val = formatCellContent(val, LBL_HORARIO);
+        if (i === 4) val = formatCellContent(val, LBL_NOTAS);
         let cellClass = (i === 0) ? 'cell-edit tribe-col' : 'cell-edit';
         tr.insertCell().innerHTML = '<textarea class="' + cellClass + '">' + val + '</textarea>';
     }
-    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold; font-size: 16px;">✖</button>';
+    tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; cursor:pointer; border:none; background:none; font-weight:bold;">✖</button>';
 }
 
 function smartMerge() {
@@ -143,67 +129,78 @@ function smartMerge() {
     const tableRows = document.getElementById('editableGrid').rows;
     let updated = 0;
 
-    let playerList = [];
+    // Obtener lista de todos los jugadores actuales para búsqueda exacta de nombres largos
+    let currentPlayers = [];
     for (let i = 0; i < tableRows.length; i++) {
-        let name = cleanTags(tableRows[i].cells[2].querySelector('textarea').value).toLowerCase();
-        playerList.push({ name: name, index: i });
+        let name = tableRows[i].cells[2].querySelector('textarea').value.replace(/\[player\]|\[\/player\]/gi, '').trim();
+        currentPlayers.push({ name: name, rowIndex: i });
     }
-    playerList.sort((a, b) => b.name.length - a.name.length);
+    // Ordenar por longitud de nombre descendente para que "Lobo de wall street" coincida antes que "Lobo"
+    currentPlayers.sort((a, b) => b.name.length - a.name.length);
 
     lines.forEach(line => {
         const coordMatch = line.match(/(\d{1,3})[|](\d{1,3})/);
         const lowLine = line.toLowerCase();
-        let isH = lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{1,2}:\d{2}/);
-        let targetRow = null;
+        let isSchedule = lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{1,2}:\d{2}/);
 
+        let targetRows = [];
+
+        // 1. Prioridad: Búsqueda por Coordenada
         if (coordMatch) {
             for (let i = 0; i < tableRows.length; i++) {
                 if (tableRows[i].cells[3].querySelector('textarea').value.includes(coordMatch[0])) {
-                    targetRow = tableRows[i]; break;
+                    targetRows.push(tableRows[i]);
+                    break;
                 }
             }
         }
 
-        if (!targetRow) {
-            for (let p of playerList) {
-                if (lowLine.startsWith(p.name)) {
-                    targetRow = tableRows[p.index]; break;
+        // 2. Si no hay coord, búsqueda por Nombre Completo al inicio de la línea
+        if (targetRows.length === 0) {
+            for (let p of currentPlayers) {
+                if (lowLine.startsWith(p.name.toLowerCase())) {
+                    targetRows.push(tableRows[p.rowIndex]);
+                    break;
                 }
             }
         }
 
-        if (targetRow) {
-            let cellH = targetRow.cells[4].querySelector('textarea');
-            let cellN = targetRow.cells[5].querySelector('textarea');
-            let cellV = targetRow.cells[3].querySelector('textarea');
+        if (targetRows.length > 0) {
+            targetRows.forEach(row => {
+                let cellH = row.cells[4].querySelector('textarea');
+                let cellN = row.cells[5].querySelector('textarea');
+                let cellV = row.cells[3].querySelector('textarea');
 
-            let infoToInject = line.trim();
+                // Limpiar el nombre del jugador o la coord de la info a inyectar
+                let infoToInject = line.trim();
 
-            if (!cellH.value.includes(infoToInject) && !cellN.value.includes(infoToInject)) {
-                if (isH) cellH.value = cellH.value.trim() + " " + infoToInject;
-                else cellN.value = cellN.value.trim() + " " + infoToInject;
-            }
+                if (isSchedule) {
+                    if (!cellH.value.includes(infoToInject)) cellH.value = cellH.value.trim() + " " + infoToInject;
+                } else {
+                    if (!cellN.value.includes(infoToInject)) cellN.value = cellN.value.trim() + " " + infoToInject;
+                }
 
-            if (coordMatch && (lowLine.includes('off') || lowLine.includes('def'))) {
-                let type = lowLine.includes('off') ? "OFF" : "DEF";
-                let base = "[coord]" + coordMatch[0] + "[/coord]";
-                let regex = new RegExp("\\[coord\\]" + coordMatch[0] + "\\[\\/coord\\].*?(\\n|$)", "i");
-                cellV.value = cellV.value.replace(regex, base + " " + type + "\n").trim();
-            }
+                // Status OFF/DEF
+                let type = lowLine.includes('off') ? "OFF" : (lowLine.includes('def') ? "DEF" : "");
+                if (type && coordMatch) {
+                    let base = "[coord]" + coordMatch[0] + "[/coord]";
+                    let regex = new RegExp("\\[coord\\]" + coordMatch[0] + "\\[\\/coord\\].*?(\\n|$)", "i");
+                    cellV.value = cellV.value.replace(regex, base + " " + type + "\n").trim();
+                }
 
-            targetRow.classList.add('updated-flash');
-            setTimeout(() => targetRow.classList.remove('updated-flash'), 1000);
+                row.classList.add('updated-flash');
+                setTimeout(() => row.classList.remove('updated-flash'), 1000);
+            });
             updated++;
         }
     });
-    document.getElementById('bulkStatus').innerText = updated + " perfiles actualizados.";
+
+    document.getElementById('bulkStatus').innerText = updated + " perfiles procesados correctamente.";
     document.getElementById('bulkInput').value = "";
 }
 
 function generateBBCode() {
     const rows = Array.from(document.getElementById('editableGrid').rows);
-    if (rows.length === 0) return alert("El editor está vacío.");
-    
     let groups = {};
     rows.forEach(r => {
         let tribe = r.cells[1].querySelector('textarea').value.trim();
@@ -225,15 +222,8 @@ function generateBBCode() {
     document.getElementById('outputCode').value = finalBB;
 }
 
-function clearAll() {
-    if(confirm("¿Estás seguro de que quieres borrar todos los datos del editor?")) {
-        document.getElementById('editableGrid').innerHTML = "";
-    }
-}
-
-function addRow() { 
-    insertRowInGrid(["General","","","horario: ","cosas que sepamos del jugador: "], false); 
-}
+function addRow() { insertRowInGrid(["General","","","horario: ","cosas que sepamos: "], false); }
+function clearAll() { if(confirm("¿Seguro?")) document.getElementById('editableGrid').innerHTML = ""; }
 </script>
 </body>
 </html>
