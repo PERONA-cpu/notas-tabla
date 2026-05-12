@@ -1,4 +1,4 @@
-# @title ⚔️ ESTRATEGA MAESTRO ES100 - v10.0 (SISTEMA DE INYECCIÓN TOTAL)
+# @title ⚔️ ESTRATEGA MAESTRO ES100 - v10.1 (ANTI-CONFLICTOS)
 from IPython.display import display, HTML
 
 html_final = r"""
@@ -28,6 +28,7 @@ html_final = r"""
         
         .updated-flash { background: #fff9c4 !important; transition: 0.8s; }
         .tribe-col { background: #fdf5e6; font-weight: bold; text-align: center; color: #5d4037; }
+        .conflict-row { background: #ffcdd2 !important; }
     </style>
 </head>
 <body>
@@ -36,13 +37,13 @@ html_final = r"""
     <div class="top-panels">
         <div class="section">
             <h3>1. Importar Tabla</h3>
-            <textarea id="importInput" rows="3" placeholder="Pega el BBCode de tu tabla actual..."></textarea>
+            <textarea id="importInput" rows="3" placeholder="Pega el BBCode aquí..."></textarea>
             <button class="btn" onclick="importTable()">CARGAR DATOS</button>
         </div>
 
         <div class="section" style="background: #cfd8dc;">
-            <h3>2. Inyectar Info Inteligente</h3>
-            <textarea id="bulkInput" rows="3" placeholder="Ej: 411|464 off  /  Selena Gomez español  /  Kano fakea a las 08:00  /  Manyas *info extra..."></textarea>
+            <h3>2. Inyectar Info (v10.1 Anti-Conflicto)</h3>
+            <textarea id="bulkInput" rows="3" placeholder="Ej: 411|464 off  /  Kano español  /  Manyas *atención..."></textarea>
             <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR TABLA</button>
             <div id="bulkStatus" style="font-size:10px; font-weight:bold; color:#2e7d32; margin-top:3px;"></div>
         </div>
@@ -80,34 +81,19 @@ function importTable() {
     let raw = document.getElementById('importInput').value.trim();
     if (!raw.includes('[table]')) return alert("Pega una tabla válida");
     document.getElementById('editableGrid').innerHTML = "";
-    
-    const spoilerRegex = /\[spoiler=(.*?)\](.*?)\[\/spoiler\]/gis;
-    let match;
-    let found = false;
-    while ((match = spoilerRegex.exec(raw)) !== null) {
-        processBlock(match[2], match[1].trim());
-        found = true;
-    }
-    if (!found) processBlock(raw, "Tribu");
-    document.getElementById('importInput').value = "";
+    processBlock(raw, "Tribu");
 }
 
 function processBlock(text, tribeDefault) {
     let content = text.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
     let rows = content.split(/\[\*\]|\[\*\*\]/).filter(r => r.trim().length > 5);
-    
     rows.forEach(r => {
         let isH = r.includes('[**]');
         let cleanR = r.replace(/\[\/\*\]/gi, '').replace(/\[\/\*\*\]/gi, '').trim();
         let cols = cleanR.split(/\s*\[\|\|\]\s*|\s*\[\|\]\s*/).map(c => c.trim());
-        
         const cleanTags = (t) => t.replace(/\[player\]|\[\/player\]|\[b\]|\[\/b\]/gi, "");
-
-        if (cols.length >= 6) {
-            insertRowInGrid([cleanTags(cols[0]), cleanTags(cols[1]), cols[2], cols[3], cols[4], cols[5]], isH);
-        } else if (cols.length === 4) {
-            insertRowInGrid([tribeDefault, cleanTags(cols[0]), cols[1], "", cols[2], cols[3]], isH);
-        }
+        if (cols.length >= 6) insertRowInGrid([cleanTags(cols[0]), cleanTags(cols[1]), cols[2], cols[3], cols[4], cols[5]], isH);
+        else if (cols.length === 4) insertRowInGrid([tribeDefault, cleanTags(cols[0]), cols[1], "", cols[2], cols[3]], isH);
     });
 }
 
@@ -123,7 +109,7 @@ function insertRowInGrid(cols, isH) {
     tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; font-weight:bold; font-size:16px;">✖</button>';
 }
 
-// --- SMART MERGE V10.0 ---
+// --- MOTOR SMART MERGE v10.1 (DELANTE + AVISO CONFLICTO) ---
 function smartMerge() {
     const rawText = document.getElementById('bulkInput').value.trim();
     if (!rawText) return;
@@ -131,7 +117,6 @@ function smartMerge() {
     const tableRows = Array.from(document.getElementById('editableGrid').rows);
     let updated = 0;
 
-    // Obtener lista de jugadores para buscar por nombre
     let playerList = tableRows.map(row => ({
         name: row.cells[2].querySelector('textarea').value.trim(),
         row: row
@@ -142,26 +127,39 @@ function smartMerge() {
         const lowLine = line.toLowerCase();
         let matched = false;
 
-        // 1. REGLA DE COORDENADAS (OFF/DEF)
+        // 1. REGLA DE COORDENADAS CON DETECTOR DE CONFLICTOS
         if (coordMatch) {
             const coord = coordMatch[0];
             tableRows.forEach(row => {
                 let cellPueblos = row.cells[3].querySelector('textarea');
-                if (cellPueblos.value.includes(coord)) {
-                    if (lowLine.includes('off') || lowLine.includes('def')) {
-                        let type = lowLine.includes('off') ? 'OFF' : 'DEF';
-                        // Reemplazar o añadir status junto a la coordenada
-                        let regex = new RegExp("(\\[coord\\]" + coord + "\\[\\/coord\\])([^\\n]*)", "g");
-                        cellPueblos.value = cellPueblos.value.replace(regex, "$1 " + type);
-                        row.classList.add('updated-flash');
-                        setTimeout(() => row.classList.remove('updated-flash'), 1000);
-                        matched = true;
+                let cellContent = cellPueblos.value;
+                
+                if (cellContent.includes(coord)) {
+                    let newType = lowLine.includes('off') ? 'OFF' : (lowLine.includes('def') ? 'DEF' : null);
+                    
+                    if (newType) {
+                        // Buscar si ya tiene un tipo asignado
+                        let regexCheck = new RegExp("\\[coord\\]" + coord + "\\[\\/coord\\]\\s*(OFF|DEF)", "i");
+                        let match = cellContent.match(regexCheck);
+                        
+                        let proceed = true;
+                        if (match && match[1].toUpperCase() !== newType) {
+                            proceed = confirm("⚠️ CONFLICTO EN " + coord + "\n\nActual: " + match[1] + "\nNuevo: " + newType + "\n\n¿Deseas cambiarlo?");
+                        }
+
+                        if (proceed) {
+                            let regexReplace = new RegExp("(\\[coord\\]" + coord + "\\[\\/coord\\])(\\s*(OFF|DEF))?", "i");
+                            cellPueblos.value = cellContent.replace(regexReplace, "$1 " + newType);
+                            row.classList.add('updated-flash');
+                            setTimeout(() => row.classList.remove('updated-flash'), 1000);
+                            matched = true;
+                        }
                     }
                 }
             });
         }
 
-        // 2. REGLA DE PAÍS / HORARIO / NOTAS POR NOMBRE
+        // 2. REGLA DE PAÍS / HORARIO / NOTAS (INSERTAR DELANTE)
         if (!matched) {
             for (let p of playerList) {
                 if (lowLine.includes(p.name.toLowerCase())) {
@@ -169,18 +167,16 @@ function smartMerge() {
                     let cellHora = p.row.cells[5].querySelector('textarea');
                     let cellNota = p.row.cells[6].querySelector('textarea');
 
-                    // Prioridad 1: Notas (contiene *)
+                    let cleanInfo = line.replace(new RegExp(p.name, 'gi'), '').replace('*', '').trim();
+
                     if (line.includes('*')) {
-                        let info = line.replace(new RegExp(p.name, 'gi'), '').replace('*', '').trim();
-                        cellNota.value = (cellNota.value + "\n" + info).trim();
+                        cellNota.value = (cleanInfo + "\n" + cellNota.value).trim();
                     }
-                    // Prioridad 2: País (keywords)
                     else if (lowLine.includes('español') || lowLine.includes('latino') || lowLine.includes('españa') || lowLine.includes('mexic') || lowLine.includes('argentin')) {
-                        cellPais.value = line.trim();
+                        cellPais.value = (cleanInfo + " " + cellPais.value).trim();
                     }
-                    // Prioridad 3: Horarios (fakea, ataca, hora)
                     else if (lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{2}:\d{2}/)) {
-                        cellHora.value = (cellHora.value + " " + line.trim()).trim();
+                        cellHora.value = (cleanInfo + " " + cellHora.value).trim();
                     }
                     
                     p.row.classList.add('updated-flash');
@@ -197,20 +193,15 @@ function smartMerge() {
     document.getElementById('bulkInput').value = "";
 }
 
-// --- EXPORTACIÓN ---
 function generateBBCode() {
     const rows = Array.from(document.getElementById('editableGrid').rows);
-    let finalBB = "[table]\n";
-    finalBB += "[**]TRIBU[||]JUGADOR[||]PUEBLOS / ESTADO[||]PAÍS[||]HORARIO[||]NOTAS[/**]\n";
-
+    let finalBB = "[table]\n[**]TRIBU[||]JUGADOR[||]PUEBLOS / ESTADO[||]PAÍS[||]HORARIO[||]NOTAS[/**]\n";
     rows.forEach(row => {
         let isH = row.cells[0].querySelector('input').checked;
         let tag = isH ? "[**]" : "[*]";
         let cells = Array.from(row.cells).slice(1, 7).map(td => td.querySelector('textarea').value.trim());
-
         finalBB += tag + "[b]" + cells[0] + "[/b][||][player]" + cells[1] + "[/player][||]" + cells[2] + "[||]" + cells[3] + "[||]" + cells[4] + "[||]" + cells[5] + "\n";
     });
-
     finalBB += "[/table]";
     document.getElementById('outputCode').value = finalBB;
 }
