@@ -1,4 +1,4 @@
-# @title ⚔️ ESTRATEGA MAESTRO ES100 - v10.1 (ANTI-CONFLICTOS)
+# @title ⚔️ ESTRATEGA MAESTRO ES100 - v10.2 (SOLUCIÓN DEFINITIVA)
 from IPython.display import display, HTML
 
 html_final = r"""
@@ -26,9 +26,8 @@ html_final = r"""
         .grid-table td { border: 1px solid var(--border); padding: 2px; vertical-align: top; }
         .cell-edit { height: 100px; resize: vertical; width: 100%; border: none; padding: 8px; font-size: 11px; line-height: 1.4; box-sizing: border-box; display: block; font-family: Verdana, sans-serif; }
         
-        .updated-flash { background: #fff9c4 !important; transition: 0.8s; }
+        .updated-flash { background: #fff9c4 !important; transition: 0.5s; border: 2px solid orange !important; }
         .tribe-col { background: #fdf5e6; font-weight: bold; text-align: center; color: #5d4037; }
-        .conflict-row { background: #ffcdd2 !important; }
     </style>
 </head>
 <body>
@@ -42,9 +41,9 @@ html_final = r"""
         </div>
 
         <div class="section" style="background: #cfd8dc;">
-            <h3>2. Inyectar Info (v10.1 Anti-Conflicto)</h3>
-            <textarea id="bulkInput" rows="3" placeholder="Ej: 411|464 off  /  Kano español  /  Manyas *atención..."></textarea>
-            <button class="btn btn-merge" onclick="smartMerge()">ACTUALIZAR TABLA</button>
+            <h3>2. Inyectar Info Inteligente (v10.2)</h3>
+            <textarea id="bulkInput" rows="3" placeholder="Ej: 411|464 off / Selena Gomez español / Manyas *info extra..."></textarea>
+            <button class="btn btn-merge" onclick="smartMerge()">INYECTAR Y ACTUALIZAR</button>
             <div id="bulkStatus" style="font-size:10px; font-weight:bold; color:#2e7d32; margin-top:3px;"></div>
         </div>
 
@@ -81,19 +80,23 @@ function importTable() {
     let raw = document.getElementById('importInput').value.trim();
     if (!raw.includes('[table]')) return alert("Pega una tabla válida");
     document.getElementById('editableGrid').innerHTML = "";
-    processBlock(raw, "Tribu");
-}
-
-function processBlock(text, tribeDefault) {
-    let content = text.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
+    
+    // Eliminar posibles spoilers externos para limpiar
+    let content = raw.replace(/\[table\]/gi, '').replace(/\[\/table\]/gi, '').trim();
     let rows = content.split(/\[\*\]|\[\*\*\]/).filter(r => r.trim().length > 5);
+    
     rows.forEach(r => {
         let isH = r.includes('[**]');
         let cleanR = r.replace(/\[\/\*\]/gi, '').replace(/\[\/\*\*\]/gi, '').trim();
         let cols = cleanR.split(/\s*\[\|\|\]\s*|\s*\[\|\]\s*/).map(c => c.trim());
+        
         const cleanTags = (t) => t.replace(/\[player\]|\[\/player\]|\[b\]|\[\/b\]/gi, "");
-        if (cols.length >= 6) insertRowInGrid([cleanTags(cols[0]), cleanTags(cols[1]), cols[2], cols[3], cols[4], cols[5]], isH);
-        else if (cols.length === 4) insertRowInGrid([tribeDefault, cleanTags(cols[0]), cols[1], "", cols[2], cols[3]], isH);
+
+        if (cols.length >= 6) {
+            insertRowInGrid([cleanTags(cols[0]), cleanTags(cols[1]), cols[2], cols[3], cols[4], cols[5]], isH);
+        } else if (cols.length === 4) {
+            insertRowInGrid(["TRIBU", cleanTags(cols[0]), cols[1], "", cols[2], cols[3]], isH);
+        }
     });
 }
 
@@ -109,90 +112,107 @@ function insertRowInGrid(cols, isH) {
     tr.insertCell().innerHTML = '<button onclick="this.parentElement.parentElement.remove()" style="color:red; border:none; background:none; font-weight:bold; font-size:16px;">✖</button>';
 }
 
-// --- MOTOR SMART MERGE v10.1 (DELANTE + AVISO CONFLICTO) ---
+// --- MOTOR SMART MERGE v10.2 ---
 function smartMerge() {
     const rawText = document.getElementById('bulkInput').value.trim();
     if (!rawText) return;
+    
     const lines = rawText.split('\n');
     const tableRows = Array.from(document.getElementById('editableGrid').rows);
-    let updated = 0;
+    let updatedCount = 0;
 
+    // Obtener lista de jugadores para búsqueda por nombre
     let playerList = tableRows.map(row => ({
         name: row.cells[2].querySelector('textarea').value.trim(),
         row: row
     })).filter(p => p.name !== "").sort((a,b) => b.name.length - a.name.length);
 
     lines.forEach(line => {
+        if (line.trim() === "") return;
+        
         const coordMatch = line.match(/(\d{1,3})[|](\d{1,3})/);
         const lowLine = line.toLowerCase();
-        let matched = false;
+        let matchedThisLine = false;
 
-        // 1. REGLA DE COORDENADAS CON DETECTOR DE CONFLICTOS
+        // 1. REGLA: SI HAY COORDENADA (Actualizar PUEBLOS/ESTADO)
         if (coordMatch) {
             const coord = coordMatch[0];
             tableRows.forEach(row => {
                 let cellPueblos = row.cells[3].querySelector('textarea');
-                let cellContent = cellPueblos.value;
-                
-                if (cellContent.includes(coord)) {
-                    let newType = lowLine.includes('off') ? 'OFF' : (lowLine.includes('def') ? 'DEF' : null);
-                    
-                    if (newType) {
-                        // Buscar si ya tiene un tipo asignado
-                        let regexCheck = new RegExp("\\[coord\\]" + coord + "\\[\\/coord\\]\\s*(OFF|DEF)", "i");
-                        let match = cellContent.match(regexCheck);
-                        
+                let cellText = cellPueblos.value;
+
+                if (cellText.includes(coord)) {
+                    let newStatus = "";
+                    if (lowLine.includes('off')) newStatus = "OFF";
+                    else if (lowLine.includes('def')) newStatus = "DEF";
+
+                    if (newStatus !== "") {
+                        // Detectar si ya existe un estado distinto
+                        let regexStatus = new RegExp(coord + ".*? (OFF|DEF)", "i");
+                        let existingMatch = cellText.match(regexStatus);
+
                         let proceed = true;
-                        if (match && match[1].toUpperCase() !== newType) {
-                            proceed = confirm("⚠️ CONFLICTO EN " + coord + "\n\nActual: " + match[1] + "\nNuevo: " + newType + "\n\n¿Deseas cambiarlo?");
+                        if (existingMatch && existingMatch[1].toUpperCase() !== newStatus) {
+                            proceed = confirm("⚠️ AVISO DE CONFLICTO\n\nEl pueblo " + coord + " ya está marcado como " + existingMatch[1].toUpperCase() + ".\n¿Quieres cambiarlo a " + newStatus + "?");
                         }
 
                         if (proceed) {
-                            let regexReplace = new RegExp("(\\[coord\\]" + coord + "\\[\\/coord\\])(\\s*(OFF|DEF))?", "i");
-                            cellPueblos.value = cellContent.replace(regexReplace, "$1 " + newType);
+                            // Si existe, lo reemplaza. Si no, lo añade justo tras la coordenada.
+                            if (existingMatch) {
+                                cellPueblos.value = cellText.replace(existingMatch[0], coord + " " + newStatus);
+                            } else {
+                                let regexCoord = new RegExp(coord.replace("|", "\\|"), "g");
+                                cellPueblos.value = cellText.replace(regexCoord, coord + " " + newStatus);
+                            }
                             row.classList.add('updated-flash');
                             setTimeout(() => row.classList.remove('updated-flash'), 1000);
-                            matched = true;
+                            matchedThisLine = true;
                         }
                     }
                 }
             });
         }
 
-        // 2. REGLA DE PAÍS / HORARIO / NOTAS (INSERTAR DELANTE)
-        if (!matched) {
-            for (let p of playerList) {
-                if (lowLine.includes(p.name.toLowerCase())) {
-                    let cellPais = p.row.cells[4].querySelector('textarea');
-                    let cellHora = p.row.cells[5].querySelector('textarea');
-                    let cellNota = p.row.cells[6].querySelector('textarea');
+        // 2. REGLA: SI NO ES COORD O SI ES INFO DE JUGADOR (PAÍS / HORARIO / NOTAS)
+        // Buscamos si la línea menciona a algún jugador de nuestra tabla
+        for (let p of playerList) {
+            if (lowLine.includes(p.name.toLowerCase())) {
+                let cellPais = p.row.cells[4].querySelector('textarea');
+                let cellHora = p.row.cells[5].querySelector('textarea');
+                let cellNota = p.row.cells[6].querySelector('textarea');
 
-                    let cleanInfo = line.replace(new RegExp(p.name, 'gi'), '').replace('*', '').trim();
+                // Limpiar el nombre del jugador de la línea para no repetirlo en la celda
+                let cleanInfo = line.replace(new RegExp(p.name, 'gi'), '').trim();
 
-                    if (line.includes('*')) {
-                        cellNota.value = (cleanInfo + "\n" + cellNota.value).trim();
-                    }
-                    else if (lowLine.includes('español') || lowLine.includes('latino') || lowLine.includes('españa') || lowLine.includes('mexic') || lowLine.includes('argentin')) {
-                        cellPais.value = (cleanInfo + " " + cellPais.value).trim();
-                    }
-                    else if (lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{2}:\d{2}/)) {
-                        cellHora.value = (cleanInfo + " " + cellHora.value).trim();
-                    }
-                    
-                    p.row.classList.add('updated-flash');
-                    setTimeout(() => p.row.classList.remove('updated-flash'), 1000);
-                    matched = true;
-                    break;
+                // Caso A: NOTAS (Contiene *)
+                if (line.includes('*')) {
+                    let infoSinAsterisco = cleanInfo.replace('*', '').trim();
+                    cellNota.value = (infoSinAsterisco + "\n" + cellNota.value).trim();
                 }
+                // Caso B: PAÍS (Keywords)
+                else if (lowLine.includes('español') || lowLine.includes('latino') || lowLine.includes('españa') || lowLine.includes('mexic') || lowLine.includes('argentin')) {
+                    cellPais.value = (cleanInfo + " " + cellPais.value).trim();
+                }
+                // Caso C: HORARIO (Fakea, ataca, 00:00)
+                else if (lowLine.includes('fake') || lowLine.includes('ataca') || line.match(/\d{2}:\d{2}/)) {
+                    cellHora.value = (cleanInfo + " " + cellHora.value).trim();
+                }
+                
+                p.row.classList.add('updated-flash');
+                setTimeout(() => p.row.classList.remove('updated-flash'), 1000);
+                matchedThisLine = true;
+                break; // Una vez encontrado el jugador, pasamos a la siguiente línea
             }
         }
-        if (matched) updated++;
+        
+        if (matchedThisLine) updatedCount++;
     });
 
-    document.getElementById('bulkStatus').innerText = updated + " cambios aplicados.";
+    document.getElementById('bulkStatus').innerText = updatedCount + " actualizaciones aplicadas.";
     document.getElementById('bulkInput').value = "";
 }
 
+// --- EXPORTACIÓN ---
 function generateBBCode() {
     const rows = Array.from(document.getElementById('editableGrid').rows);
     let finalBB = "[table]\n[**]TRIBU[||]JUGADOR[||]PUEBLOS / ESTADO[||]PAÍS[||]HORARIO[||]NOTAS[/**]\n";
